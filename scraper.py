@@ -61,7 +61,7 @@ def update_firebase_rates():
 
         # 4. الكتابة المباشرة في الجذر الأساسي لقاعدة البيانات
         db_url = (
-            'https://gold-tracker-6d16f-default-rtdb.firebaseio.com/.json'
+            'https://gold-tracker-6d16f-default-rtdb.firebaseio.com/json'
         )
         db_headers = {
             'Authorization': f'Bearer {access_token}',
