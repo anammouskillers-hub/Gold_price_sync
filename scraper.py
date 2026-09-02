@@ -1,35 +1,11 @@
 import json
 import os
-import firebase_admin
-from firebase_admin import credentials, db
 import requests
 
-# 1. تهيئة الاتصال بـ Firebase
-cred_json = os.environ.get('FIREBASE_CREDENTIALS')
 
-if cred_json:
-    try:
-        cred_dict = json.loads(cred_json)
-        cred = credentials.Certificate(cred_dict)
-
-        # رابط قاعدة البيانات الخاص بك
-        firebase_admin.initialize_app(
-            cred,
-            {
-                'databaseURL': (
-                    'https://gold-tracker-6d16f-default-rtdb.firebaseio.com'
-                )
-            },
-        )
-        print('تم الاتصال بـ Firebase بنجاح!')
-    except Exception as e:
-        print(f'خطأ في إعداد Firebase Credentials: {e}')
-
-
-def update_yemen_rates():
-    # رابط API مباشر لجلب الأسعار
+def update_firebase_via_rest():
+    # 1. جلب البيانات من الـ API المباشر
     api_url = "https://cygrlhmnmckoefefnsjc.supabase.co/functions/v1/public-api/latest"
-
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -39,29 +15,49 @@ def update_yemen_rates():
     try:
         response = requests.get(api_url, headers=headers, timeout=10)
         response.raise_for_status()
-        result = response.json()
+        data = response.json()
 
-        if result.get("success"):
-            rates_data = result.get("data")
+        if not data.get("success"):
+            print("لم يتم العثور على بيانات من المصدر.")
+            return
 
-            # 2. الكتابة في الجذر الأساسي لقاعدة البيانات للتأكد من وصولها
-            ref = db.reference('/')
-            ref.update(
-                {
-                    'latest_rates': rates_data,
-                    'last_updated': {'.sv': 'timestamp'},
-                }
+        rates_data = data.get("data")
+        print("تم جلب البيانات بنجاح من الـ API:")
+        print(rates_data)
+
+        # 2. تجهيز البيانات للتخزين
+        payload = {
+            "rates": rates_data,
+            "updated_at": {
+                ".sv": "timestamp"
+            },  # توقيت Firebase التلقائي
+        }
+
+        # 3. إرسال البيانات مباشرة لقاعدة بيانات Firebase عبر REST API
+        # هذا الرابط المباشر يضمن الكتابة بدون مشاكل الاعتماديات
+        db_url = "https://gold-tracker-6d16f-default-rtdb.firebaseio.com/currency_rates/latest.json"
+
+        # طلب PUT لتحديث أو إنشاء البيانات مباشرة
+        put_response = requests.put(db_url, json=payload, timeout=10)
+
+        if put_response.status_code == 200:
+            print(
+                "==========================================================="
             )
-
-            print('>>> تم حفظ البيانات بنجاح داخل Firebase! <<<')
-            print(rates_data)
+            print(" تم تحديث البيانات بنجاح في Realtime Database!")
+            print(
+                "==========================================================="
+            )
         else:
-            print('الـ API لم يرجع بيانات صالحة.')
+            print(
+                f"فشل التحديث في Firebase. كود الاستجابة: {put_response.status_code}"
+            )
+            print(f"التفاصيل: {put_response.text}")
 
     except Exception as e:
-        print(f'حدث خطأ أثناء كتابة البيانات: {e}')
+        print(f"حدث خطأ أثناء تنفيذ العملية: {e}")
 
 
-if __name__ == '__main__':
-    update_yemen_rates()
+if __name__ == "__main__":
+    update_firebase_via_rest()
     
