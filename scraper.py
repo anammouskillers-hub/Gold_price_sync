@@ -8,22 +8,26 @@ import requests
 cred_json = os.environ.get('FIREBASE_CREDENTIALS')
 
 if cred_json:
-    cred_dict = json.loads(cred_json)
-    cred = credentials.Certificate(cred_dict)
+    try:
+        cred_dict = json.loads(cred_json)
+        cred = credentials.Certificate(cred_dict)
 
-    # تم وضع رابط قاعدة البيانات الخاص بك هنا
-    firebase_admin.initialize_app(
-        cred,
-        {
-            'databaseURL': (
-                'https://gold-tracker-6d16f-default-rtdb.firebaseio.com'
-            )
-        },
-    )
+        # رابط قاعدة البيانات الخاص بك
+        firebase_admin.initialize_app(
+            cred,
+            {
+                'databaseURL': (
+                    'https://gold-tracker-6d16f-default-rtdb.firebaseio.com'
+                )
+            },
+        )
+        print('تم الاتصال بـ Firebase بنجاح!')
+    except Exception as e:
+        print(f'خطأ في إعداد Firebase Credentials: {e}')
 
 
-def update_yemen_rates_to_firebase():
-    # رابط الـ API المباشر لأسعار اليمن (صنعاء وعدن والذهب)
+def update_yemen_rates():
+    # رابط API مباشر لجلب الأسعار
     api_url = "https://cygrlhmnmckoefefnsjc.supabase.co/functions/v1/public-api/latest"
 
     headers = {
@@ -40,27 +44,24 @@ def update_yemen_rates_to_firebase():
         if result.get("success"):
             rates_data = result.get("data")
 
-            # 2. رفع الأسعار إلى المسار المحدد داخل قاعدة بياناتك
-            ref = db.reference("currency_rates/latest")
-            ref.set(
+            # 2. الكتابة في الجذر الأساسي لقاعدة البيانات للتأكد من وصولها
+            ref = db.reference('/')
+            ref.update(
                 {
-                    "rates": rates_data,
-                    "updated_at": {
-                        ".sv": "timestamp"
-                    },  # توقيت التحديث التلقائي من Firebase
+                    'latest_rates': rates_data,
+                    'last_updated': {'.sv': 'timestamp'},
                 }
             )
 
-            print("تم التحديث بنجاح في قاعدة البيانات gold-tracker!")
-            print(f"سعر صنعاء (USD): {rates_data.get('sanaa_usd_buy')}")
-            print(f"سعر عدن (USD): {rates_data.get('aden_usd_buy')}")
+            print('>>> تم حفظ البيانات بنجاح داخل Firebase! <<<')
+            print(rates_data)
         else:
-            print("فشل في استلام البيانات من الـ API")
+            print('الـ API لم يرجع بيانات صالحة.')
 
     except Exception as e:
-        print(f"حدث خطأ أثناء التحديث: {e}")
+        print(f'حدث خطأ أثناء كتابة البيانات: {e}')
 
 
-if __name__ == "__main__":
-    update_yemen_rates_to_firebase()
+if __name__ == '__main__':
+    update_yemen_rates()
     
