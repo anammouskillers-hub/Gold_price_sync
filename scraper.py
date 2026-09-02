@@ -26,14 +26,14 @@ def get_access_token():
 
 
 def update_firebase_rates():
-    # 1. جلب Token التوثيق الرسمي
+    # 1. جلب Token التوثيق
     try:
         access_token = get_access_token()
     except Exception as e:
         print(f'فشل التوثيق: {e}')
         return
 
-    # 2. جلب الأسعار المباشرة من API المصدر
+    # 2. جلب الأسعار المباشرة من الـ API
     api_url = 'https://cygrlhmnmckoefefnsjc.supabase.co/functions/v1/public-api/latest'
     headers = {
         'User-Agent': (
@@ -52,14 +52,17 @@ def update_firebase_rates():
 
         rates_data = data.get('data')
 
-        # 3. إعداد البيانات للإرسال
+        # 3. إعداد البيانات المُراد حفظها
         payload = {
             'rates': rates_data,
+            'status': 'success',
             'updated_at': {'.sv': 'timestamp'},
         }
 
-        # 4. إرسال طلب الكتابة لـ Firebase مع تمرير الـ Bearer Token
-        db_url = 'https://gold-tracker-6d16f-default-rtdb.firebaseio.com/currency_rates/latest.json'
+        # 4. الكتابة المباشرة في الجذر الأساسي لقاعدة البيانات
+        db_url = (
+            'https://gold-tracker-6d16f-default-rtdb.firebaseio.com/.json'
+        )
         db_headers = {
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json',
@@ -79,7 +82,7 @@ def update_firebase_rates():
             print(f'التفاصيل: {put_response.text}')
 
     except Exception as e:
-        print(f'حدث خطأ: {e}')
+        print(f'حدث خطأ أثناء التنفيذ: {e}')
 
 
 if __name__ == '__main__':
