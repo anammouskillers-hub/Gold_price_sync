@@ -33,5 +33,5 @@ jobs:
       - name: Run script to update Firebase
         env:
           FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-        run: python main.py # استبدل main.py باسم ملف البايثون لديك إذا كان مختلفاً
+        run: python scraper.py # استبدل main.py باسم ملف البايثون لديك إذا كان مختلفاً
         
